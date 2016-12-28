@@ -1,4 +1,4 @@
-package com.think.coolweather.gson;
+package com.think.coolweather.util;
 
 import android.text.TextUtils;
 

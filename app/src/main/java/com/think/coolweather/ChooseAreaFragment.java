@@ -2,6 +2,7 @@ package com.think.coolweather;
 
 import android.app.ProgressDialog;
 import android.os.Bundle;
+import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
@@ -12,15 +13,24 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.think.coolweather.api.API;
 import com.think.coolweather.db.City;
 import com.think.coolweather.db.County;
 import com.think.coolweather.db.Province;
+import com.think.coolweather.util.Utility;
+import com.think.coolweather.util.HttpUtil;
 
 import org.litepal.crud.DataSupport;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
 
 /**
  * Created by Think on 2016/12/27.
@@ -90,6 +100,7 @@ public class ChooseAreaFragment extends Fragment {
                 }
             }
         });
+        queryProvinces();
     }
 
     /**
@@ -108,8 +119,30 @@ public class ChooseAreaFragment extends Fragment {
             listView.setSelection(0);
             currentLevel = LEVEL_PROVINCE;
         } else {
-            String address = "http://guolin.tech/api/china";
+            String address = API.URL;
             queryFromServer(address, "province");
+        }
+    }
+
+    /**
+     * 查询全国所有的市，优先从数据库查询，如果没有查询到再去服务器查询
+     */
+    private void queryCities() {
+        titleText.setText(selectedProvince.getProvinceName());
+        backButton.setVisibility(View.VISIBLE);
+        cityList = DataSupport.where("provinceid = ?", String.valueOf(selectedProvince.getId())).find(City.class);
+        if (cityList.size() > 0) {
+            dataList.clear();
+            for (City city : cityList) {
+                dataList.add(city.getCityName());
+            }
+                adapter.notifyDataSetChanged();
+                listView.setSelection(0);
+                currentLevel = LEVEL_CITY;
+        } else {
+            int provinceCode = selectedProvince.getProvinceCode();
+            String address = API.URL +provinceCode;
+            queryFromServer(address, "city");
         }
     }
 
@@ -117,16 +150,73 @@ public class ChooseAreaFragment extends Fragment {
      * 查询全国所有的县，优先从数据库查询，如果没有查询到再去服务器查询
      */
     private void queryCounties() {
+        titleText.setText(selectedCity.getCityName());
+        backButton.setVisibility(View.VISIBLE);
+        countyList = DataSupport.where("cityid = ?", String.valueOf(selectedCity.getId())).find(County.class);
+        if (countyList.size() > 0) {
+            dataList.clear();
+            for (County county : countyList) {
+                dataList.add(county.getCountyName());
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            currentLevel = LEVEL_COUNTY;
+        } else {
+            int provinceCode = selectedProvince.getProvinceCode();
+            int cityCode = selectedCity.getCityCode();
+            String address = API.URL +provinceCode + "/" + cityCode;
+            queryFromServer(address, "county");
+        }
     }
 
-    /**
-     * 查询全国所有的城市，优先从数据库查询，如果没有查询到再去服务器查询
-     */
-    private void queryCities() {
-    }
-
-    private void queryFromServer(String address, String province) {
+    private void queryFromServer(String address, final String type) {
         showProgressDialog();
+        HttpUtil.sendOkHttpRequest(address, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                //通过runOnUiThread的方法回到主线程处理逻辑
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        closeProgressDialog();
+                        Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                String responseText = response.body().string();
+                boolean result = false;
+                if("province".equals(type)){
+                    result = Utility.handleProvinceResponse(responseText);
+                }else if("city".equals(type)){
+                    result = Utility.handleCityResponse(responseText,selectedProvince.getId());
+                }else if("county".equals(type)){
+                    result = Utility.handleCountyResponse(responseText,selectedCity.getId());
+                }
+                if(result){
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            closeProgressDialog();
+                            if("province".equals(type)){
+                                queryProvinces();
+                            }else if("city".equals(type)){
+                                queryCities();
+                            }else if("county".equals(type)){
+                                queryCounties();
+                            }
+                        }
+                    });
+                } else{
+                    closeProgressDialog();
+                    Looper.loop();
+                    Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
+                    Looper.prepare();
+                }
+            }
+        });
     }
 
     /**
