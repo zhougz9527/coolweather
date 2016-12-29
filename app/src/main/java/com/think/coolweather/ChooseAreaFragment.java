@@ -19,8 +19,8 @@ import com.think.coolweather.api.API;
 import com.think.coolweather.db.City;
 import com.think.coolweather.db.County;
 import com.think.coolweather.db.Province;
-import com.think.coolweather.util.Utility;
 import com.think.coolweather.util.HttpUtil;
+import com.think.coolweather.util.Utility;
 
 import org.litepal.crud.DataSupport;
 
@@ -31,6 +31,7 @@ import java.util.List;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
+
 
 /**
  * Created by Think on 2016/12/27.
@@ -136,12 +137,12 @@ public class ChooseAreaFragment extends Fragment {
             for (City city : cityList) {
                 dataList.add(city.getCityName());
             }
-                adapter.notifyDataSetChanged();
-                listView.setSelection(0);
-                currentLevel = LEVEL_CITY;
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            currentLevel = LEVEL_CITY;
         } else {
             int provinceCode = selectedProvince.getProvinceCode();
-            String address = API.URL +provinceCode;
+            String address = API.URL + provinceCode;
             queryFromServer(address, "city");
         }
     }
@@ -164,7 +165,7 @@ public class ChooseAreaFragment extends Fragment {
         } else {
             int provinceCode = selectedProvince.getProvinceCode();
             int cityCode = selectedCity.getCityCode();
-            String address = API.URL +provinceCode + "/" + cityCode;
+            String address = API.URL + provinceCode + "/" + cityCode;
             queryFromServer(address, "county");
         }
     }
@@ -172,6 +173,7 @@ public class ChooseAreaFragment extends Fragment {
     private void queryFromServer(String address, final String type) {
         showProgressDialog();
         HttpUtil.sendOkHttpRequest(address, new Callback() {
+
             @Override
             public void onFailure(Call call, IOException e) {
                 //通过runOnUiThread的方法回到主线程处理逻辑
@@ -188,28 +190,28 @@ public class ChooseAreaFragment extends Fragment {
             public void onResponse(Call call, Response response) throws IOException {
                 String responseText = response.body().string();
                 boolean result = false;
-                if("province".equals(type)){
+                if ("province".equals(type)) {
                     result = Utility.handleProvinceResponse(responseText);
-                }else if("city".equals(type)){
-                    result = Utility.handleCityResponse(responseText,selectedProvince.getId());
-                }else if("county".equals(type)){
-                    result = Utility.handleCountyResponse(responseText,selectedCity.getId());
+                } else if ("city".equals(type)) {
+                    result = Utility.handleCityResponse(responseText, selectedProvince.getId());
+                } else if ("county".equals(type)) {
+                    result = Utility.handleCountyResponse(responseText, selectedCity.getId());
                 }
-                if(result){
+                if (result) {
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             closeProgressDialog();
-                            if("province".equals(type)){
+                            if ("province".equals(type)) {
                                 queryProvinces();
-                            }else if("city".equals(type)){
+                            } else if ("city".equals(type)) {
                                 queryCities();
-                            }else if("county".equals(type)){
+                            } else if ("county".equals(type)) {
                                 queryCounties();
                             }
                         }
                     });
-                } else{
+                } else {
                     closeProgressDialog();
                     Looper.loop();
                     Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
