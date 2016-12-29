@@ -2,15 +2,18 @@ package com.think.coolweather.util;
 
 import android.text.TextUtils;
 
+import com.google.gson.Gson;
 import com.think.coolweather.db.City;
 import com.think.coolweather.db.County;
 import com.think.coolweather.db.Province;
+import com.think.coolweather.gson.Weather;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
+ * 工具类
  * Created by Think on 2016/12/27.
  */
 
@@ -89,6 +92,23 @@ public class Utility {
             }
         }
         return false;
+    }
+
+    /**
+     * 将返回的JSON数据解析成Weather实体类
+     * @param response
+     * @return
+     */
+    public static Weather handleWeatherResponse(String response){
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            JSONArray jsonArray = jsonObject.optJSONArray("HeWeather");
+            String weatherContent = jsonArray.getJSONObject(0).toString();
+            return new Gson().fromJson(weatherContent,Weather.class);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 }

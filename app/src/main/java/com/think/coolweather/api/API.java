@@ -6,4 +6,5 @@ package com.think.coolweather.api;
 
 public class API {
     public static final String URL = "http://guolin.tech/api/china/";
+    public static final String IMG_URL = "HTTP://guolin.tech/api/bing_pic";
 }
